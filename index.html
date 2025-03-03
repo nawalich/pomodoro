@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Focus Dashboard Interactif</title>
+  <style>
+    /* RESET DE BASE */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* STYLES GLOBAUX */
+    body {
+      font-family: Arial, sans-serif;
+      background-image: url('view3.jpeg');
+      display: flex;
+      background-repeat: no-repeat;
+      background-attachment:fixed;
+      background-position: center;
+      background-size: cover;
+      color: #fff;  
+      margin-top: 14em;
+      background-attachment: fixed;
+      overflow: hidden; 
+    }
+
+    h1, h2, h3, p {
+      margin-bottom: 10px;
+    }
+
+    /* CONTENEUR PRINCIPAL (DASHBOARD) */
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto; /* Centre la grille */
+    }
+
+    /* CARTE GÉNÉRIQUE */
+    .card {
+      border:#000000 solid 1px;
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-height: 220px;
+    }
+
+    .card h2 {
+      font-size: 1.2rem;
+      margin-bottom: 10px;
+    }
+
+    /* BOUTONS ET CHECKBOX */
+    button, input[type="checkbox"] {
+      cursor: pointer;
+    }
+    button {
+      background-color: #3f51b5; /* Bleu */
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      padding: 10px 15px;
+      font-size: 0.9rem;
+    }
+    button:hover {
+      background-color: #303f9f; /* Bleu un peu plus foncé */
+    }
+    input[type="checkbox"] {
+      margin-right: 5px;
+    }
+
+    /* FOCUS SESSION */
+    .focus-session h2 {
+      margin-bottom: 15px;
+    }
+    .focus-session .info {
+      font-size: 1.1rem;
+      margin-bottom: 5px;
+    }
+    .focus-session .timer-display {
+      font-size: 1.4rem;
+      font-weight: bold;
+      text-align: center;
+      margin: 10px 0;
+    }
+
+    /* PROGRESSION QUOTIDIENNE */
+    .daily-progress p {
+      margin-bottom: 5px;
+    }
+    .clock {
+      font-size: 1.8rem;
+      text-align: center;
+      margin: 10px 0;
+    }
+
+    /* TO DO */
+    .todo input[type="text"] {
+      width: 100%;
+      padding: 8px;
+      border-radius: 4px;
+      border: none;
+      margin-bottom: 10px;
+    }
+    .todo ul {
+      list-style: none;
+      padding: 0;
+    }
+    .todo li {
+      /*background-color: #3a3a3a;*/
+      padding: 8px;
+      border-radius: 4px;
+      margin-bottom: 5px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .todo .delete-btn {
+      background-color: #e53935;
+      padding: 5px 8px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      color: #fff;
+    }
+    .todo .delete-btn:hover {
+      background-color: #c62828;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+      .dashboard {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="dashboard">
+
+    <!-- CARTE 1 : FOCUS SESSION (240 minutes) -->
+    <div class="card focus-session">
+      <h2>Préparez-vous à vous concentrer</h2>
+      <div class="info">240 minutes au total</div>
+      <div class="info">Vous avez 8 pauses</div>
+      <label>
+        <input type="checkbox" id="skipBreaks" />
+        Sauter des pauses
+      </label>
+      
+      <!-- Affichage du compte à rebours -->
+      <div class="timer-display" id="timerDisplay">240:00</div>
+
+      <!-- Boutons de contrôle -->
+      <div>
+        <button id="startBtn">Démarrer</button>
+        <button id="pauseBtn">Pause</button>
+        <button id="resetBtn">Reset</button>
+      </div>
+    </div>
+
+    <!-- CARTE 2 : PROGRESSION QUOTIDIENNE (AVEC HORLOGE RÉELLE) -->
+    <div class="card daily-progress">
+      <h2>Progression quotidienne</h2>
+      <!-- Horloge en temps réel -->
+      <div class="clock" id="clock">00:00:00</div>
+      <p>Objectif quotidien : <strong>8 heures</strong></p>
+      <p>Terminé : <strong><span id="completedMinutes">0</span> minutes</strong></p>
+      <p>Tâches complétées : <strong><span id="completedTasks">0</span></strong></p>
+    </div>
+
+  
+    <!-- CARTE 4 : TO DO -->
+    <div class="card todo">
+      <h2>To Do</h2>
+      <input type="text" id="taskInput" placeholder="Nouvelle tâche..." />
+      <button id="addTaskBtn">Ajouter</button>
+      <ul id="taskList">
+        <!-- Les tâches apparaîtront ici -->
+      </ul>
+    </div>
+
+  </div>
+
+  <script>
+    
+    // 1) HORLOGE EN TEMPS RÉEL
+    
+    function updateClock() {
+      const now = new Date();
+      let hours = now.getHours().toString().padStart(2, '0');
+      let minutes = now.getMinutes().toString().padStart(2, '0');
+      let seconds = now.getSeconds().toString().padStart(2, '0');
+      document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    
+    // 2) COMPTE À REBOURS (240 MINUTES)
+    
+    const totalTime = 240 * 60; // 240 minutes en secondes
+    let currentTime = totalTime;
+    let timerInterval;
+    let isRunning = false;
+
+    const timerDisplay = document.getElementById('timerDisplay');
+    const skipBreaksCheckbox = document.getElementById('skipBreaks');
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const resetBtn = document.getElementById('resetBtn');
+
+    function updateTimerDisplay() {
+      const minutes = Math.floor(currentTime / 60).toString().padStart(2, '0');
+      const seconds = (currentTime % 60).toString().padStart(2, '0');
+      timerDisplay.textContent = `${minutes}:${seconds}`;
+    }
+
+    function startTimer() {
+      if (!isRunning) {
+        timerInterval = setInterval(() => {
+          if (currentTime > 0) {
+            currentTime--;
+            updateTimerDisplay();
+            // Incrémenter la progression quotidienne au fur et à mesure
+            updateDailyProgress();
+          } else {
+            clearInterval(timerInterval);
+            isRunning = false;
+            // ICI : Gérer la fin de la session ou la pause
+            alert("Session terminée !");
+          }
+        }, 1000);
+        isRunning = true;
+      }
+    }
+
+    function pauseTimer() {
+      clearInterval(timerInterval);
+      isRunning = false;
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      isRunning = false;
+      currentTime = totalTime;
+      updateTimerDisplay();
+    }
+
+    startBtn.addEventListener('click', startTimer);
+    pauseBtn.addEventListener('click', pauseTimer);
+    resetBtn.addEventListener('click', resetTimer);
+
+    // Initialiser l'affichage du timer
+    updateTimerDisplay();
+
+    
+    // 3) PROGRESSION QUOTIDIENNE
+    
+    let totalMinutesCompleted = 0;
+    const completedMinutesEl = document.getElementById('completedMinutes');
+
+    function updateDailyProgress() {
+      // Ajoute 1 minute à totalMinutesCompleted toutes les 60 secondes,
+      // mais pour simplifier, on va le faire toutes les 60 compteurs (1 minute).
+      // Ici, chaque seconde, on vérifie s'il reste un multiple de 60
+      // => version simplifiée : incrémenter toutes les 60 secondes
+      // (on surveille quand currentTime % 60 == 0)
+      if (currentTime % 60 === 0) {
+        totalMinutesCompleted++;
+        completedMinutesEl.textContent = totalMinutesCompleted;
+      }
+    }
+
+    
+    // 4) TO DO LIST
+    
+    const addTaskBtn = document.getElementById('addTaskBtn');
+    const taskInput = document.getElementById('taskInput');
+    const taskList = document.getElementById('taskList');
+    const completedTasksEl = document.getElementById('completedTasks');
+    let completedTasksCount = 0;
+
+    function addTask() {
+      const taskText = taskInput.value.trim();
+      if (taskText !== '') {
+        const li = document.createElement('li');
+        li.textContent = taskText;
+
+        // Bouton de suppression
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = "X";
+        deleteBtn.classList.add('delete-btn');
+        deleteBtn.addEventListener('click', () => {
+          // Si on veut incrémenter "tâches complétées" quand on supprime, c'est possible,
+          // mais souvent on le fait quand on coche la tâche comme finie.
+          // Pour l'exemple, incrémentons le compteur.
+          completedTasksCount++;
+          completedTasksEl.textContent = completedTasksCount;
+          li.remove();
+        });
+
+        li.appendChild(deleteBtn);
+        taskList.appendChild(li);
+        taskInput.value = '';
+      }
+    }
+
+    addTaskBtn.addEventListener('click', addTask);
+    taskInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        addTask();
+      }
+    });
+  </script>
+</body>
+</html>
